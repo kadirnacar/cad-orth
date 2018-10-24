@@ -1,111 +1,112 @@
+import { rebuildSolids } from '@jscad/core/code-evaluation/rebuildSolids';
+import * as makeCsgViewer from '@jscad/csg-viewer';
 import * as React from 'react';
-import * as ReactDOM from 'react-dom';
+import MonacoEditor from 'react-monaco-editor';
 import { connect } from 'react-redux';
-import { Col, Container, ListGroup, ListGroupItem, Row } from 'reactstrap';
+import { Button, Col, Container, Row } from 'reactstrap';
 import CNavbar from '../containers/App/navbar';
 import { ApplicationState } from '../store';
-import { rebuildSolids } from '@jscad/core/code-evaluation/rebuildSolids';
-import { stlDeSerializer } from '@jscad/io';
-import * as scad from '@jscad/scad-api';
-import * as makeCsgViewer from '@jscad/csg-viewer';
-
 
 class Channels extends React.Component<any, any>{
-    constructor(props) {
-        super(props);
-        this.viewer = React.createRef();
-    }
-
-    componentDidMount() {
-        const text: string = "\
-        function main () { \
-          return union(\
-            difference(\
-              cube({size: 3, center: true}),\
-              sphere({r: 2, center: true})\
-            ),\
-            intersection(\
-              sphere({r: 1.3, center: true}),\
-              cube({size: 2.1, center: true})\
-            )\
-          ).translate([0, 0, 1.5]).scale(10);\
-        }";
-
-        const viewerOptions ={
-            camera: {
-              fov: 45,                           // field of view
-              angle: {x: -60, y: 0, z: -45},  // view angle about XYZ axis
-              position: [ 0, 0, 100],  // initial position at XYZ
-              clip: {min: 0.5, max: 1000}  // rendering outside this range is clipped
-            },
-            plate: {
-              draw: true,                // draw or not
-              size: 200,                 // plate size (X and Y)
-              // minor grid settings
-              m: {
-                i: 1, // number of units between minor grid lines
-                color: {r: 0.8, g: 0.8, b: 0.8, a: 0.5} // color
-              },
-              // major grid settings
-              M: {
-                i: 10, // number of units between major grid lines
-                color: {r: 0.5, g: 0.5, b: 0.5, a: 0.5} // color
-              }
-            },
-            axis: {
-              draw: false,                // draw or not
-              x: {
-                neg: {r: 1.0, g: 0.5, b: 0.5, a: 0.5}, // color in negative direction
-                pos: {r: 1.0, g: 0, b: 0, a: 0.8} // color in positive direction
-              },
-              y: {
-                neg: {r: 0.5, g: 1.0, b: 0.5, a: 0.5}, // color in negative direction
-                pos: {r: 0, g: 1.0, b: 0, a: 0.8} // color in positive direction
-              },
-              z: {
-                neg: {r: 0.5, g: 0.5, b: 1.0, a: 0.5}, // color in negative direction
-                pos: {r: 0, g: 0, b: 1.0, a: 0.8} // color in positive direction
-              }
-            },
-            solid: {
-              draw: true,              // draw or not
-              lines: false,             // draw outlines or not
-              faces: true,
-              overlay: false,             // use overlay when drawing lines or not
-              smooth: false,             // use smoothing or not
-              faceColor: {r: 1.0, g: 0.4, b: 1.0, a: 1.0},        // default face color
-              outlineColor: {r: 0.0, g: 0.0, b: 0.0, a: 0.1}        // default outline color
-            },
-            background: {
-              color: {r: 0.93, g: 0.93, b: 0.93, a: 1.0}
-            }
+  constructor(props) {
+    super(props);
+    this.state = {
+      text: "\
+    function main () { \r\
+      return union(\r\
+        difference(\r\
+          cube({size: 3, center: true}),\r\
+          sphere({r: 2, center: true})\r\
+        ),\r\
+        intersection(\r\
+          sphere({r: 1.3, center: true}),\r\
+          cube({size: 2.1, center: true})\r\
+        )\r\
+      ).translate([0, 0, 1.5]).scale(10);\r\
+    }" ,
+      viewerOptions: {
+        rendering: {
+          background: [0.211, 0.2, 0.207, 1], // [1, 1, 1, 1],//54, 51, 53
+          meshColor: [0.4, 0.6, 0.5, 1]
+        },
+        grid: {
+          show: true,
+          color: [1, 1, 1, 1]
+        },
+        camera: {
+          position: [0, 0, 100]
+        },
+        controls: {
+          zoomToFit: {
+            targets: 'all'
+          },
+          limits: {
+            maxDistance: 1600,
+            minDistance: 0.01
           }
+        }
+      }
+    };
+    this.viewer = React.createRef();
+    this.editor = React.createRef();
+  }
 
-        const { csgViewer, viewerDefaults, viewerState$ } = makeCsgViewer(this.viewer.current, viewerOptions)
-        console.log(stlDeSerializer);
-        rebuildSolids(text, "", null, (err, objects) => {
-            csgViewer(viewerOptions, { solids: objects })
-        });
-    }
-    viewer: any;
-    render() {
-        return <Container fluid tabIndex={0}>
-            <CNavbar />
-            <div className="clearfix dd" style={{ padding: '.5rem' }}></div>
-            <Row>
-                <Col md="6">
+  componentDidMount() {
+    this.csgViewer = makeCsgViewer(this.viewer.current, this.state.viewerOptions).csgViewer;
+    // this.renderCsg(true);
+  }
+  renderCsg(options) {
+    this.setState({ text: this.editor.editor.getValue() });
+    rebuildSolids(this.editor.editor.getValue(), "", null, (err, objects) => {
+      if (options)
+        this.csgViewer(this.state.viewerOptions, { solids: objects });
+      else
+        this.csgViewer({}, { solids: objects });
+    });
+  }
+  viewer: any;
+  csgViewer: any;
+  editor: any;
+  render() {
+    const options = {
+    };
+    return <Container fluid tabIndex={0}>
+      <CNavbar />
+      <div className="clearfix dd" style={{ padding: '.5rem' }}></div>
+      <Row>
+        <Col md="6">
+          <Row>
+            <Col xs="12">
+              <Button color="warning" onClick={() => { this.editor.editor.getAction('editor.action.formatDocument').run(); }}><i className="fa fa-refresh" /> Format</Button>
+              <Button color="primary" onClick={() => { this.renderCsg(false); }}><i className="fa fa-refresh" /> Yenile</Button>
 
-                </Col>
-                <Col md="6">
-                    <canvas ref={this.viewer} id="editor"></canvas>
-                </Col>
-            </Row>
+            </Col>
+            <Col xs="12">
+              <MonacoEditor ref={(a) => { this.editor = a; }}
+                language="javascript" height="600" theme="vs-dark"
+                options={options}
+                value={this.state.text}
+              />
+            </Col>
+          </Row>
 
-        </Container >;
-    }
+        </Col>
+        <Col md="6">
+          <div style={{
+            width: "100%",
+            minHeight: 800,
+            border: "1px solid",
+            position: "relative"
+          }} ref={this.viewer} id="editor">
+          </div>
+        </Col>
+      </Row>
+
+    </Container >;
+  }
 }
 
 // export default Channels;
 export default connect(
-    (state: ApplicationState) => state
+  (state: ApplicationState) => state
 )(Channels);
