@@ -1,4 +1,4 @@
-import { rebuildSolids,rebuildSolidsInWorker } from '@jscad/core/code-evaluation/rebuildSolids';
+import { rebuildSolids } from '@jscad/core/code-evaluation/rebuildSolids';
 import * as makeCsgViewer from '@jscad/csg-viewer';
 import * as React from 'react';
 import MonacoEditor from 'react-monaco-editor';
@@ -6,10 +6,12 @@ import { connect } from 'react-redux';
 import { Button, Col, Container, Row } from 'reactstrap';
 import CNavbar from '../containers/App/navbar';
 import { ApplicationState } from '../store';
-// import { stlDeSerializer } from '@jscad/io';
+import * as simplify from '../utils/simplify';
 import * as stlDeSerializer from '../containers/Viewer/deserializer';
-import * as Viewer from '../containers/Viewer';
-import * as Processor from '../containers/Viewer/processor';
+import * as THREE from 'three';
+import * as THREESTLLoader from '../containers/Viewer/threeDeSerializer';
+import { vt2jscad } from '../containers/Viewer/vt2jscad2';
+var STLLoader = new THREESTLLoader(THREE);
 
 class Channels extends React.Component<any, any>{
   constructor(props) {
@@ -56,43 +58,17 @@ function main () { \r\
   }
 
   componentDidMount() {
-    // this.csgViewer = new Viewer(this.viewer.current, {})
-    // this.csgViewer = new Processor(this.viewer.current, {
-    //   viewer: {
-    //     plate: {
-    //       size: 1000,
-    //       m: {
-    //         i: 1,
-    //         color: { r: 0.3, g: 0.3, b: 0.3, a: 0.5 }
-    //       },
-    //       M: {
-    //         i: 1,
-    //         color: { r: 0.9, g: 0.9, b: 0.9, a: 0.5 }
-    //       }
-    //     },
-    //     camera: {
-    //       position: { x: 0, y: 0, z: 1000 },
-    //       clip: { min: 0.5, max: 3000 }
-    //     },
-    //     axis: {
-    //       draw: true
-    //     }
-    //   }
-    // })
-    // console.log(gProcessor);
     this.csgViewer = makeCsgViewer(this.viewer.current, this.state.viewerOptions).csgViewer;
-    // this.renderCsg(true);
   }
   renderCsg(options) {
 
-    // this.csgViewer.setJsCad(this.state.text, this.state.filename);
-    rebuildSolids(this.editor.editor.getValue(), "", {}, (err, objects) => {
-      console.log(err,objects);
+    rebuildSolids(this.state.text, "", {}, (err, objects) => {
       if (options)
         this.csgViewer(this.state.viewerOptions, { solids: objects });
       else
-        this.csgViewer(this.state.viewerOptions, { solids: objects });
+        this.csgViewer({}, { solids: objects });
     });
+
   }
   viewer: any;
   csgViewer: any;
@@ -112,19 +88,43 @@ function main () { \r\
     }
     fileReader.onloadend = (ev) => {
       if (fileReader.result) {
-        const converted = stlDeSerializer.deserialize(convert(fileReader.result), files[0].name, { version: "1.9.0", addMetaData: false, name: "deneme" });
-        const endfix="\nfunction main() {\n\
-          var p = polyhedron(deneme).rotateY(-45);\n\
-          return difference(\n\
-            p,\n\
-            difference(p, cube({ size: [120, 250, 150], center: [1, 1, 0] }))\n\
-            );\n\
+        // const deSerialized = stlDeSerializer.deserialize(convert(fileReader.result),
+        //   files[0].name,
+        //   { version: "1.9.0", metadata: "var deneme = " },
+        //   (vertices, triangles) => {
+        //     return { vertices, triangles };
+        //   }
+        // );
+        var loader = new STLLoader();
+        console.time("stlloader");
+        var c = loader.parse(convert(fileReader.result));
+        console.timeEnd("stlloader");
+        console.time("tovscad");
+        var result = "var deneme = " + vt2jscad(c.verticesCad, c.trianglesCad);
+        console.timeEnd("tovscad");
+        // const deSerialized = stlDeSerializer.deserialize(convert(fileReader.result),
+        //   files[0].name,
+        //   { version: "1.9.0", metadata: "var deneme = " },
+        //   (vertices, triangles) => {
+        //     return { vertices, triangles };
+        //   }
+        // );
+
+        // const endfix = "\nfunction main() {\n\
+        //   var p = polyhedron(deneme).rotateY(-45);\n\
+        //   return difference(\n\
+        //     p,\n\
+        //     difference(p, cube({ size: [120, 250, 150], center: [1, 1, 0] }))\n\
+        //     );\n\
+        // }";
+        const endfix = "\nfunction main() {\n\
+          var p = polyhedron(deneme)\n\
+          return p;\n\
         }";
-        this.setState({ text: converted+endfix, filename: files[0].name });
+        this.setState({ text: result + endfix, filename: files[0].name });
       }
     };
     fileReader.readAsArrayBuffer(files[0]);
-    console.log(files);
   }
   render() {
     const options = {

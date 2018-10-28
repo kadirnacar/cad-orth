@@ -5,6 +5,9 @@ const {
   vt2jscad
 } = require('./vt2jscad')
 const {
+  vt2jscad2
+} = require('./vt2jscad2')
+const {
   BinaryReader
 } = require('@jscad/io-utils')
 
@@ -27,20 +30,20 @@ const echo = console.info
  * @param {string} [options.output='jscad'] {String} either jscad or csg to set desired output
  * @return {CSG/string} either a CAG/CSG object or a string (jscad script)
  */
-function deserialize(stl, filename, options) {
+function deserialize(stl, filename, options, onJsonSerialize) {
   options && options.statusCallback && options.statusCallback({
     progress: 0
   })
   const defaults = {
     version: '0.0.0',
-    addMetaData: true,
-    output: 'jscad'
+    output: 'jscad',
+    metadata: ""
   }
   options = Object.assign({}, defaults, options)
   const {
     version,
     output,
-    addMetaData
+    metadata
   } = options
 
   const isBinary = isDataBinaryRobust(stl)
@@ -57,7 +60,29 @@ function deserialize(stl, filename, options) {
     normals,
     colors,
     index
-  }) => `var ${options.name.replace(/\.[^\.]+$/, '')} = ${vt2jscad(vertices, triangles, null)}`
+  }) => {
+
+    if (onJsonSerialize) {
+      var data = onJsonSerialize.call(this, vertices, triangles);
+      // var g = vt2jscad2(data.vertices, data.triangles, null);
+      console.time("vt2jscad");
+      var result = ''; // vt2jscad(data.vertices, data.triangles, null);
+      console.timeEnd("vt2jscad");
+      return {
+        vertices: data.vertices,
+        triangles: data.triangles,
+        result
+      }
+    } else {
+      return {
+        vertices: vertices,
+        triangles: triangles,
+        result: vt2jscad(data.vertices, data.triangles, null)
+      }
+    }
+  }
+  // }) =>  `var ${options.name.replace(/\.[^\.]+$/, '')} = ${vt2jscad(vertices, triangles, null)}`;
+
   const elementFormatterCSG = ({
     vertices,
     triangles,
@@ -76,12 +101,12 @@ function deserialize(stl, filename, options) {
   const elementFormatter = output === 'jscad' ? elementFormatterJscad : elementFormatterCSG
   const outputFormatter = output === 'jscad' ? formatAsJscad : formatAsCsg
 
-  const result = outputFormatter(deserializer(stl, filename, version, elementFormatter), addMetaData, version, filename)
+  const result = outputFormatter(deserializer(stl, filename, version, elementFormatter), metadata)
 
   options && options.statusCallback && options.statusCallback({
     progress: 100
   })
-  return result
+  return result;
 
   /*
   if (err) src += '// WARNING: import errors: ' + err + ' (some triangles might be misaligned or missing)\n'
@@ -129,18 +154,15 @@ function isDataBinaryRobust(data) {
   return isBinary
 }
 
-function formatAsJscad(data, addMetaData, version, filename) {
-  let code = addMetaData ? `//
-  // producer: OpenJSCAD.org Compatibility${version} STL Binary Importer
-  // date: ${new Date()}
-  // source: ${filename}
-  //
-  ` : ''
+function formatAsJscad(data, metadata) {
 
-  return code + `
+  return {
+    result: `
 // objects: ${data.length}
-${data.join('\n')}; 
-`
+${data.map((item)=> metadata + item.result).join('\n')}; 
+`,
+    data: data
+  }
 }
 
 function formatAsCsg(data) {
@@ -149,6 +171,7 @@ function formatAsCsg(data) {
 
 function deserializeBinarySTL(stl, filename, version, elementFormatter, debug = false) {
   // -- This makes more sense if you read http://en.wikipedia.org/wiki/STL_(file_format)#Binary_STL
+  let checkvertices = []
   let vertices = []
   let triangles = []
   let normals = []
@@ -254,9 +277,28 @@ function deserializeBinarySTL(stl, filename, version, elementFormatter, debug = 
     err += skip
     // -- every 3 vertices create a triangle.
     let triangle = [];
-    triangle.push(vertexIndex++);
-    triangle.push(vertexIndex++);
-    triangle.push(vertexIndex++)
+    var v1Index = checkvertices.indexOf(v1.join(','));
+
+    if (v1Index == -1) {
+      triangle.push(vertexIndex++);
+      checkvertices.push(v1.join(','));
+    } else
+      triangle.push(v1Index);
+
+    var v2Index = checkvertices.indexOf(v2.join(','));
+    if (v2Index == -1) {
+      triangle.push(vertexIndex++);
+      checkvertices.push(v2.join(','));
+    } else
+      triangle.push(v2Index);
+
+    var v3Index = checkvertices.indexOf(v3.join(','));
+
+    if (v3Index == -1) {
+      triangle.push(vertexIndex++)
+      checkvertices.push(v3.join(','));
+    } else
+      triangle.push(v3Index);
 
     let abc = br.readUInt16()
     let color = null
@@ -293,9 +335,12 @@ function deserializeBinarySTL(stl, filename, version, elementFormatter, debug = 
         v1 = tmp
       }
     }
-    vertices.push(v1)
-    vertices.push(v2)
-    vertices.push(v3)
+    if (v1Index == -1)
+      vertices.push(v1)
+    if (v2Index == -1)
+      vertices.push(v2)
+    if (v3Index == -1)
+      vertices.push(v3)
     triangles.push(triangle)
     normals.push(no)
     converted++
