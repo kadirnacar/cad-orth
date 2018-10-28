@@ -191,7 +191,7 @@ module.exports = function (THREE) {
                     if (index == undefined) {
                         triangle.push(verticesCad.length);
                         verticesCad2[vert] = verticesCad.length;
-                        verticesCad.push(vert);
+                        verticesCad.push(v1p[i]);
                     } else {
                         triangle.push(index);
                     }
@@ -202,16 +202,14 @@ module.exports = function (THREE) {
             }
 
             if (hasColors) {
-
                 geometry.addAttribute('color', new THREE.BufferAttribute(new Float32Array(colors), 3));
                 geometry.hasColors = true;
                 geometry.alpha = alpha;
-
             }
             verticesCad2 = undefined;
             return {
-                verticesCad,
-                trianglesCad
+                points: verticesCad,
+                polygons: trianglesCad
             };
 
         },
