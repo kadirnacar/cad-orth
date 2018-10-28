@@ -7,6 +7,7 @@ import { Provider } from 'react-redux';
 import configureStore from './configureStore';
 import App from './containers/App';
 import history from './history';
+import 'react-block-ui/style.css';
 
 const initialState = (window as any).initialReduxState;
 const store = configureStore(history, initialState);
