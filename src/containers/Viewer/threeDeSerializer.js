@@ -94,8 +94,15 @@ module.exports = function (THREE) {
 
             };
 
+            function toBinary(input) {
+                var result = "";
+                for (var i = 0; i < input.length; i++) {
+                    var bin = input[i].charCodeAt().toString(2);
+                    result += Array(8 - bin.length + 1).join("0") + bin;
+                }
+                return result;
+            }
             var binData = this.ensureBinary(data);
-
             return isBinary() ? this.parseBinary(binData) : this.parseASCII(this.ensureString(data));
 
         },
