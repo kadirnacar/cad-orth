@@ -13,7 +13,7 @@ class Channels extends React.Component<any, any>{
   constructor(props) {
     super(props);
 
-    this.state = { 
+    this.state = {
       items: [],
       blocking: false,
       viewerOptions: {
@@ -55,10 +55,12 @@ class Channels extends React.Component<any, any>{
     new Promise((resolve, reject) => {
       var sdItems = [];
       items.forEach((item) => {
-        const polyhedron = oscad.primitives3d.polyhedron(item.value);
+        const polyhedron =oscad.booleanOps.intersection(oscad.primitives3d.cube(200), item.value);
         sdItems.push(polyhedron);
       });
+      this.setState({ items: [] })
       this.csgViewer.setCurrentObjects(sdItems);
+      sdItems=undefined;
       resolve();
     }).then(() => {
       this.toggleBlocking()
@@ -83,7 +85,7 @@ class Channels extends React.Component<any, any>{
       loader.load(this.fileInput.files[0]).then((data) => {
         this.toggleBlocking();
         const { items } = this.state;
-        items.push({ name: this.fileInput.files[0].name, value: data });
+        items.push({ name: this.fileInput.files[0].name, value: oscad.primitives3d.polyhedron(data) });
         this.setState(items);
       }).catch(ex => {
         this.toggleBlocking();

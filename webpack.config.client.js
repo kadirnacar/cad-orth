@@ -25,7 +25,12 @@ module.exports = (env) => {
             contentBase: path.resolve(__dirname, 'dist'),
             historyApiFallback: true,
             publicPath: "/",
-            watchContentBase: true
+            watchContentBase: true,
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+                "Access-Control-Allow-Headers": "X-Requested-With, content-type, Authorization"
+              }
         },
         devtool: isDevBuild ? 'source-map' : 'hidden-source-map',
         mode: isDevBuild ? 'development' : 'production',

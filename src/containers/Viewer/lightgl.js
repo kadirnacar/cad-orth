@@ -1463,7 +1463,6 @@ var GL = (function () {
 		}
 
 		function mousemove(e) {
-			console.log('mousemove', e)
 			gl = context;
 			e = augment(e);
 			if (gl.onmousemove) gl.onmousemove(e);

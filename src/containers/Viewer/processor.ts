@@ -22,8 +22,6 @@ export class Processor {
     this.onchange = null // function(Processor) for callback
     this.currentObjects = [] // list of objects returned from rebuildObject*
     this.viewedObject = null // the object being rendered
-    this.selectStartPoint = 0
-    this.selectEndPoint = 0
 
     // FIXME: UI only, seperate
     this.createElements()
@@ -34,14 +32,6 @@ export class Processor {
   currentObjects;
   opts;
   containerdiv;
-  selectStartPoint;
-  selectEndPoint;
-
-  private revokeBlobUrl(url) {
-    if (window.URL) window.URL.revokeObjectURL(url)
-    else if (window["webkitURL"]) window["webkitURL"].revokeObjectURL(url)
-    else throw new Error("Your browser doesn't support window.URL")
-  }
 
   private createElements() {
     var that = this // for event handlers
@@ -75,28 +65,13 @@ export class Processor {
   public setCurrentObjects(objs) {
     this.currentObjects = objs // list of CAG or CSG objects
 
-    this.selectStartPoint = -1 // force view update
     this.updateView()
 
     if (this.onchange)
       this.onchange(this)
   }
   private updateView() {
-    var startpoint = 0
-    var endpoint = 0
-    if (startpoint === this.selectStartPoint && endpoint === this.selectEndPoint) {
-      return
-    }
-
-    // build a list of objects to view
-    this.selectStartPoint = startpoint
-    this.selectEndPoint = endpoint
-    if (startpoint > endpoint) {
-      startpoint = this.selectEndPoint;
-      endpoint = this.selectStartPoint
-    }
-
-    var objs = this.currentObjects.slice(startpoint, endpoint + 1)
+    var objs = this.currentObjects;
     this.viewedObject = mergeSolids(objs)
 
     if (this.viewer) {
