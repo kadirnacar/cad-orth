@@ -1,13 +1,12 @@
 import * as React from 'react';
-import MonacoEditor from 'react-monaco-editor';
 import { connect } from 'react-redux';
-import { Button, Col, Container, Row, InputGroup, InputGroupAddon, Input } from 'reactstrap';
+import { Button, Col, Container, Row, InputGroup, InputGroupAddon } from 'reactstrap';
 import CNavbar from '../containers/App/navbar';
+import ItemView from './ItemView';
 import { ApplicationState } from '../store';
-import * as oscad from '@jscad/csg/api';
-import { Processor } from '../containers/Viewer/processor';
-import { STLLoader } from '../utils/STLLoader';
+import Renderer from '../utils/Renderer';
 import BlockUi from 'react-block-ui';
+
 
 class Channels extends React.Component<any, any>{
   constructor(props) {
@@ -15,25 +14,7 @@ class Channels extends React.Component<any, any>{
 
     this.state = {
       items: [],
-      blocking: false,
-      viewerOptions: {
-        viewer: {
-          plate: {
-            draw: true,
-            size: 1000
-          },
-          camera: {
-            position: { x: 0, y: 0, z: 1000 },
-            clip: { min: 0.5, max: 3000 }
-          },
-          axis: {
-            draw: true
-          },
-          solid: {
-            draw: true
-          }
-        }
-      }
+      blocking: false
     };
 
     this.viewer = React.createRef();
@@ -46,57 +27,36 @@ class Channels extends React.Component<any, any>{
   }
 
   componentDidMount() {
-    this.csgViewer = new Processor(this.viewer.current, this.state.viewerOptions)
-  }
-
-  renderCsg() {
-    this.toggleBlocking();
-    const { items } = this.state;
-    new Promise((resolve, reject) => {
-      var sdItems = [];
-      items.forEach((item) => {
-        const polyhedron =oscad.booleanOps.intersection(oscad.primitives3d.cube(200), item.value);
-        sdItems.push(polyhedron);
-      });
-      this.setState({ items: [] })
-      this.csgViewer.setCurrentObjects(sdItems);
-      sdItems=undefined;
-      resolve();
-    }).then(() => {
-      this.toggleBlocking()
-    })
-      .catch((ex) => {
-        console.error(ex);
-        // this.toggleBlocking()
-      });
+    this.renderer = new Renderer(this.viewer.current as HTMLCanvasElement);
   }
 
   viewer: any;
   csgViewer: any;
   editor: any;
   fileInput: any;
+  renderer: Renderer;
 
   addButtonClick = (e) => {
     if (this.fileInput.files.length == 0) {
 
     } else {
       this.toggleBlocking();
-      const loader = new STLLoader();
-      loader.load(this.fileInput.files[0]).then((data) => {
-        this.toggleBlocking();
-        const { items } = this.state;
-        items.push({ name: this.fileInput.files[0].name, value: oscad.primitives3d.polyhedron(data) });
-        this.setState(items);
-      }).catch(ex => {
-        this.toggleBlocking();
-        console.log(ex)
-      });
+      this.renderer.loadStl(this.fileInput.files[0])
+        .then((data) => {
+          const { items } = this.state;
+          items.push({ name: this.fileInput.files[0].name, index: data });
+          this.setState(items);
+          this.toggleBlocking();
+        }).catch(ex => {
+          this.toggleBlocking();
+          console.log(ex)
+        });
     }
   }
-
+  renderCsg() {
+  }
   render() {
-    const options = {
-    };
+
     return <Container fluid tabIndex={0}>
       <CNavbar />
       <div className="clearfix dd" style={{ padding: '.5rem' }}></div>
@@ -118,15 +78,28 @@ class Channels extends React.Component<any, any>{
             </Row>
             <Row>
               <Col xs="12">
-
+                {
+                  this.state.items.map((item, index) => {
+                    return <ItemView key={index}
+                      renderer={this.renderer}
+                      data={item}
+                      onDelete={(event) => {
+                        const { items } = this.state;
+                        items.splice(index, 1);
+                        this.renderer.Delete(item.index);
+                        this.setState(items);
+                      }} />
+                  })
+                }
               </Col>
             </Row>
           </Col>
           <Col md="6">
-            <div style={{
+            <canvas style={{
+              width: '100%',
               height: 800
             }} ref={this.viewer}>
-            </div>
+            </canvas>
           </Col>
         </Row>
       </BlockUi>
