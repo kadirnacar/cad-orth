@@ -1,5 +1,6 @@
 import * as BABYLON from 'babylonjs';
 import STLFileLoader from './STLFileLoader';
+import { CSG } from './bCSG';
 
 export default class Renderer {
     constructor(canvas: HTMLCanvasElement) {
@@ -185,6 +186,17 @@ export default class Renderer {
     public setRotate({ x, y, z }, index) {
         this._scene.meshes[index].rotation.set(x / 57, y / 57, z / 57);
     }
+    public setScale({ x, y, z }, index) {
+        this._scene.meshes[index].scaling.set(x, y, z);
+    }
+    public intersect(index1, index2) {
+        var a = this._scene.meshes[index1];
+        var b = this._scene.meshes[index2];
+        var aCSG = CSG.FromMesh(a as BABYLON.Mesh);
+        var bCSG = CSG.FromMesh(b as BABYLON.Mesh);
+        var subCSG = aCSG.intersect(bCSG);
+        subCSG.toMesh("csg", new BABYLON.StandardMaterial("mat", this._scene), this._scene, false);
+    }
     public Delete(index) {
         this._scene.meshes[index].dispose();
     }
@@ -196,8 +208,17 @@ export default class Renderer {
                     if (fileReader.result) {
                         const loader: STLFileLoader = new STLFileLoader();
                         loader.load(this._scene, fileReader.result, '');
-                        var bCSG = BABYLON.CSG.FromMesh(this._scene.meshes[this._scene.meshes.length - 1] as BABYLON.Mesh);
-                        console.log(this._scene.meshes[this._scene.meshes.length - 1]);
+                        // var mesh = this._scene.meshes[this._scene.meshes.length - 1];
+                        // var a = mesh as BABYLON.Mesh;
+                        // var b = BABYLON.Mesh.CreateBox("box", 250, this._scene);
+                        // var aCSG = CSG.FromMesh(a);
+                        // var bCSG = CSG.FromMesh(b);
+                        // var subCSG = aCSG.intersect(bCSG);
+                        // a.dispose();
+                        // b.dispose();
+                        // mesh = subCSG.toMesh("csg", new BABYLON.StandardMaterial("mat", this._scene), this._scene, false);
+                        // var serializedMesh = BABYLON.SceneSerializer.SerializeMesh(mesh);
+                        // console.log(serializedMesh);
                         resolve(this._scene.meshes.length - 1);
                     } else {
                         resolve(null);

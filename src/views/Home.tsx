@@ -44,6 +44,7 @@ class Channels extends React.Component<any, any>{
       this.renderer.loadStl(this.fileInput.files[0])
         .then((data) => {
           const { items } = this.state;
+
           items.push({ name: this.fileInput.files[0].name, index: data });
           this.setState(items);
           this.toggleBlocking();
@@ -53,7 +54,8 @@ class Channels extends React.Component<any, any>{
         });
     }
   }
-  renderCsg() {
+  intersect() {
+    this.renderer.intersect(this.state.items[0].index, this.state.items[1].index)
   }
   render() {
 
@@ -62,10 +64,10 @@ class Channels extends React.Component<any, any>{
       <div className="clearfix dd" style={{ padding: '.5rem' }}></div>
       <BlockUi tag="div" blocking={this.state.blocking}>
         <Row>
-          <Col md="6">
+          <Col md="4">
             <Row>
               <Col xs="12">
-                <Button color="primary" onClick={this.renderCsg.bind(this)}><i className="fa fa-refresh" /> Render</Button>
+                <Button color="primary" onClick={this.intersect.bind(this)}><i className="fa fa-refresh" /> Intersect</Button>
               </Col>
             </Row>
             <Row>
@@ -94,7 +96,7 @@ class Channels extends React.Component<any, any>{
               </Col>
             </Row>
           </Col>
-          <Col md="6">
+          <Col md="8">
             <canvas style={{
               width: '100%',
               height: 800

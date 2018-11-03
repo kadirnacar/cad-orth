@@ -22,7 +22,9 @@
     ],
     "types": [
       "webpack-env",
-      "node", "redux"
+      "node",
+      "redux",
+      "babylonjs"
     ],
     "typeRoots": ["./types", "./node_modules/@types"]
   },

@@ -2,14 +2,14 @@ import {
     ISceneLoaderPlugin,
     ISceneLoaderPluginExtensions,
     Scene,
-    AbstractMesh,
     Nullable,
     Mesh,
     Tools,
     AssetContainer,
     VertexBuffer,
     IParticleSystem,
-    Skeleton
+    Skeleton,
+    AbstractMesh
 } from 'babylonjs';
 
 export default class STLFileLoader implements ISceneLoaderPlugin {
@@ -27,7 +27,7 @@ export default class STLFileLoader implements ISceneLoaderPlugin {
         ".stl": { isBinary: true },
     };
 
-    public importMesh(meshesNames: any, scene: Scene, data: any, rootUrl: string, meshes: Nullable<AbstractMesh[]>, particleSystems: Nullable<IParticleSystem[]>, skeletons: Nullable<Skeleton[]>): boolean {
+    public importMesh(meshesNames: any, scene: Scene, data: any, rootUrl: string, meshes: Nullable<Mesh[]>, particleSystems: Nullable<IParticleSystem[]>, skeletons: Nullable<Skeleton[]>): boolean {
         var matches;
 
         if (typeof data !== "string") {
@@ -89,10 +89,14 @@ export default class STLFileLoader implements ISceneLoaderPlugin {
         return true;
 
     }
-
+    callback?: (meshes: Mesh[]) => void;
     public load(scene: Scene, data: any, rootUrl: string): boolean {
-        var result = this.importMesh(null, scene, data, rootUrl, null, null, null);
+        let meshes: Mesh[] = [];
+        var result = this.importMesh(null, scene, data, rootUrl, meshes, null, null);
 
+        if (this.callback) {
+            this.callback.call(this, meshes);
+        }
         if (result) {
             scene.createDefaultCameraOrLight();
         }
@@ -102,7 +106,7 @@ export default class STLFileLoader implements ISceneLoaderPlugin {
 
     public loadAssetContainer(scene: Scene, data: string, rootUrl: string, onError?: (message: string, exception?: any) => void): AssetContainer {
         var container = new AssetContainer(scene);
-        this.importMesh(null, scene, data, rootUrl, container.meshes, null, null);
+        this.importMesh(null, scene, data, rootUrl, container.meshes as Mesh[], null, null);
         container.removeAllFromScene();
         return container;
     }
