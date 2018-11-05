@@ -1,6 +1,5 @@
 import * as oscad from '@jscad/csg/api';
 import * as React from 'react';
-import MonacoEditor from 'react-monaco-editor';
 import { Button, Col, InputGroup, InputGroupAddon, Row } from 'reactstrap';
 import Processor from '../containers/Editor/Processor';
 import { STLLoader } from '../utils/STLLoader';
