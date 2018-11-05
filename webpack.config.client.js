@@ -19,7 +19,7 @@ module.exports = (env) => {
     const config = {
         devServer: {
             host: 'localhost',
-            port: 4000,
+            port: 4001,
             hot: true,
             inline: true,
             contentBase: path.resolve(__dirname, 'dist'),

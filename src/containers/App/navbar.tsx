@@ -11,6 +11,9 @@ class CNavbar extends React.Component<any, any>{
                 <NavItem>
                     <NavLink tag={RNavLink} to="/">Anasayfa</NavLink>
                 </NavItem>
+                <NavItem>
+                    <NavLink tag={RNavLink} to="/editor">Editor</NavLink>
+                </NavItem>
             </Nav>
         </Navbar>;
     }

@@ -1,7 +1,8 @@
 import { CSG } from '@jscad/csg';
+// import { CSG } from './CSG.js';
 
 export class STLLoader {
-    constructor() {  }
+    constructor() { }
 
     private isBinary(binData) {
         let expect, face_size, n_faces, reader;

@@ -1,13 +1,11 @@
-import * as React from 'react';
-import MonacoEditor from 'react-monaco-editor';
-import { connect } from 'react-redux';
-import { Button, Col, Container, Row, InputGroup, InputGroupAddon, Input } from 'reactstrap';
-import CNavbar from '../containers/App/navbar';
-import { ApplicationState } from '../store';
 import * as oscad from '@jscad/csg/api';
-import { Processor } from '../containers/Viewer/processor';
-import { STLLoader } from '../utils/STLLoader';
+import * as React from 'react';
 import BlockUi from 'react-block-ui';
+import { connect } from 'react-redux';
+import { Button, Col, InputGroup, InputGroupAddon, Row } from 'reactstrap';
+import { Processor } from '../containers/Viewer/processor';
+import { ApplicationState } from '../store';
+import { STLLoader } from '../utils/STLLoader';
 
 class Channels extends React.Component<any, any>{
   constructor(props) {
@@ -55,8 +53,8 @@ class Channels extends React.Component<any, any>{
     new Promise((resolve, reject) => {
       var sdItems = [];
       items.forEach((item) => {
-        const polyhedron =oscad.booleanOps.intersection(oscad.primitives3d.cube(200), item.value);
-        sdItems.push(polyhedron);
+        // const polyhedron =oscad.booleanOps.intersection(oscad.primitives3d.cube(200), item.value);
+        sdItems.push(item.value);
       });
       this.setState({ items: [] })
       this.csgViewer.setCurrentObjects(sdItems);
@@ -86,6 +84,7 @@ class Channels extends React.Component<any, any>{
         this.toggleBlocking();
         const { items } = this.state;
         items.push({ name: this.fileInput.files[0].name, value: oscad.primitives3d.polyhedron(data) });
+        console.log(items);
         this.setState(items);
       }).catch(ex => {
         this.toggleBlocking();
@@ -95,12 +94,8 @@ class Channels extends React.Component<any, any>{
   }
 
   render() {
-    const options = {
-    };
-    return <Container fluid tabIndex={0}>
-      <CNavbar />
-      <div className="clearfix dd" style={{ padding: '.5rem' }}></div>
-      <BlockUi tag="div" blocking={this.state.blocking}>
+    
+    return <BlockUi tag="div" blocking={this.state.blocking}>
         <Row>
           <Col md="6">
             <Row>
@@ -130,7 +125,7 @@ class Channels extends React.Component<any, any>{
           </Col>
         </Row>
       </BlockUi>
-    </Container >;
+    ;
   }
 }
 

@@ -33,6 +33,8 @@
     "ndarray-ops": "^1.2.2",
     "normals": "^1.1.0",
     "prop-types": "^15.6.2",
+    "rc-slider": "^8.6.3",
+    "rc-tooltip": "^3.7.3",
     "react": "^16.5.2",
     "react-block-ui": "^1.1.3",
     "react-dom": "^16.5.2",
@@ -47,6 +49,10 @@
     "remove-orphan-vertices": "^1.0.0",
     "simplify-geometry": "0.0.2",
     "three": "^0.97.0",
+    "three-canvas-renderer": "^2.0.0",
+    "three-dragcontrols": "^0.88.2",
+    "three-orbit-controls": "^82.1.0",
+    "three-projector-renderer": "^1.0.1",
     "three-stl-loader": "^1.0.6"
   },
   "devDependencies": {
