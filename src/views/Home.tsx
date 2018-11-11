@@ -18,7 +18,6 @@ class Channels extends React.Component<any, any>{
     };
 
     this.viewer = React.createRef();
-    this.editor = React.createRef();
     this.fileInput = React.createRef();
   }
 
@@ -31,8 +30,6 @@ class Channels extends React.Component<any, any>{
   }
 
   viewer: any;
-  csgViewer: any;
-  editor: any;
   fileInput: any;
   renderer: Renderer;
 

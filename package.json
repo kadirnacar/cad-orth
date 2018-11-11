@@ -52,7 +52,9 @@
     "remove-degenerate-cells": "^1.0.0",
     "remove-orphan-vertices": "^1.0.0",
     "simplify-geometry": "0.0.2",
-    "three": "^0.97.0",
+    "three": "0.98.0",
+    "three-js-csg": "^72.0.0",
+    "three-orbit-controls": "^82.1.0",
     "three-stl-loader": "^1.0.6"
   },
   "devDependencies": {

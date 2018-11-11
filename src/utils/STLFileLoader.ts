@@ -1,153 +1,106 @@
-import {
-    ISceneLoaderPlugin,
-    ISceneLoaderPluginExtensions,
-    Scene,
-    Nullable,
-    Mesh,
-    Tools,
-    AssetContainer,
-    VertexBuffer,
-    IParticleSystem,
-    Skeleton,
-    AbstractMesh
-} from 'babylonjs';
 
-export default class STLFileLoader implements ISceneLoaderPlugin {
+import * as THREE from 'three';
 
-    public solidPattern = /solid (\S*)([\S\s]*)endsolid[ ]*(\S*)/g;
-    public facetsPattern = /facet([\s\S]*?)endfacet/g;
-    public normalPattern = /normal[\s]+([\-+]?[0-9]+\.?[0-9]*([eE][\-+]?[0-9]+)?)+[\s]+([\-+]?[0-9]*\.?[0-9]+([eE][\-+]?[0-9]+)?)+[\s]+([\-+]?[0-9]*\.?[0-9]+([eE][\-+]?[0-9]+)?)+/g;
-    public vertexPattern = /vertex[\s]+([\-+]?[0-9]+\.?[0-9]*([eE][\-+]?[0-9]+)?)+[\s]+([\-+]?[0-9]*\.?[0-9]+([eE][\-+]?[0-9]+)?)+[\s]+([\-+]?[0-9]*\.?[0-9]+([eE][\-+]?[0-9]+)?)+/g;
 
-    public name = "stl";
+export class STLLoader {
+    constructor(manager?: any) {
+        this.manager = (manager !== undefined) ? manager : THREE.DefaultLoadingManager;
+    }
+    manager;
 
-    // force data to come in as an ArrayBuffer
-    // we'll convert to string if it looks like it's an ASCII .stl
-    public extensions: ISceneLoaderPluginExtensions = {
-        ".stl": { isBinary: true },
-    };
+    public load(url, onLoad, onProgress?, onError?) {
 
-    public importMesh(meshesNames: any, scene: Scene, data: any, rootUrl: string, meshes: Nullable<Mesh[]>, particleSystems: Nullable<IParticleSystem[]>, skeletons: Nullable<Skeleton[]>): boolean {
-        var matches;
+        var scope = this;
 
-        if (typeof data !== "string") {
+        var loader = new THREE.FileLoader(scope.manager);
+        loader.setResponseType('arraybuffer');
+        onLoad(scope.parse(url));
+        //     loader.load(url, function (text) {
 
-            if (this.isBinary(data)) {
-                // binary .stl
-                var babylonMesh = new Mesh("stlmesh", scene);
-                this.parseBinary(babylonMesh, data);
-                if (meshes) {
-                    meshes.push(babylonMesh);
-                }
+
+        // }, onProgress, onError);
+
+    }
+
+    parse(data) {
+
+        var isBinary = function () {
+
+            var expect, face_size, n_faces, reader;
+            reader = new DataView(binData);
+            face_size = (32 / 8 * 3) + ((32 / 8 * 3) * 3) + (16 / 8);
+            n_faces = reader.getUint32(80, true);
+            expect = 80 + (32 / 8) + (n_faces * face_size);
+
+            if (expect === reader.byteLength) {
+
                 return true;
+
             }
 
-            // ASCII .stl
+            // An ASCII STL data must begin with 'solid ' as the first six bytes.
+            // However, ASCII STLs lacking the SPACE after the 'd' are known to be
+            // plentiful.  So, check the first 5 bytes for 'solid'.
 
-            // convert to string
-            var array_buffer = new Uint8Array(data);
-            var str = '';
-            for (var i = 0; i < data.byteLength; i++) {
-                str += String.fromCharCode(array_buffer[i]); // implicitly assumes little-endian
-            }
-            data = str;
-        }
+            // US-ASCII ordinal values for 's', 'o', 'l', 'i', 'd'
+            var solid = [115, 111, 108, 105, 100];
 
-        //if arrived here, data is a string, containing the STLA data.
+            for (var i = 0; i < 5; i++) {
 
-        while (matches = this.solidPattern.exec(data)) {
-            var meshName = matches[1];
-            var meshNameFromEnd = matches[3];
-            if (meshName != meshNameFromEnd) {
-                Tools.Error("Error in STL, solid name != endsolid name");
-                return false;
+                // If solid[ i ] does not match the i-th byte, then it is not an
+                // ASCII STL; hence, it is binary and return true.
+
+                if (solid[i] != reader.getUint8(i, false)) return true;
+
             }
 
-            // check meshesNames
-            if (meshesNames && meshName) {
-                if (meshesNames instanceof Array) {
-                    if (!meshesNames.indexOf(meshName)) {
-                        continue;
-                    }
-                } else {
-                    if (meshName !== meshesNames) {
-                        continue;
-                    }
-                }
-            }
+            // First 5 bytes read "solid"; declare it to be an ASCII STL
+            return false;
 
-            // stl mesh name can be empty as well
-            meshName = meshName || "stlmesh";
+        };
 
-            var babylonMesh = new Mesh(meshName, scene);
-            this.parseASCII(babylonMesh, matches[2]);
-            if (meshes) {
-                meshes.push(babylonMesh);
-            }
-        }
+        var binData = this.ensureBinary(data);
 
-        return true;
+        return isBinary() ? this.parseBinary(binData) : this.parseASCII(this.ensureString(data));
 
     }
-    callback?: (meshes: Mesh[]) => void;
-    public load(scene: Scene, data: any, rootUrl: string): boolean {
-        let meshes: Mesh[] = [];
-        var result = this.importMesh(null, scene, data, rootUrl, meshes, null, null);
 
-        if (this.callback) {
-            this.callback.call(this, meshes);
-        }
-        if (result) {
-            scene.createDefaultCameraOrLight();
-        }
-
-        return result;
-    }
-
-    public loadAssetContainer(scene: Scene, data: string, rootUrl: string, onError?: (message: string, exception?: any) => void): AssetContainer {
-        var container = new AssetContainer(scene);
-        this.importMesh(null, scene, data, rootUrl, container.meshes as Mesh[], null, null);
-        container.removeAllFromScene();
-        return container;
-    }
-
-    private isBinary(data: any) {
-
-        // check if file size is correct for binary stl
-        var faceSize, nFaces, reader;
-        reader = new DataView(data);
-        faceSize = (32 / 8 * 3) + ((32 / 8 * 3) * 3) + (16 / 8);
-        nFaces = reader.getUint32(80, true);
-
-        if (80 + (32 / 8) + (nFaces * faceSize) === reader.byteLength) {
-            return true;
-        }
-
-        // check characters higher than ASCII to confirm binary
-        var fileLength = reader.byteLength;
-        for (var index = 0; index < fileLength; index++) {
-            if (reader.getUint8(index) > 127) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private parseBinary(mesh: Mesh, data: ArrayBuffer) {
+    parseBinary(data) {
 
         var reader = new DataView(data);
         var faces = reader.getUint32(80, true);
 
+        var r, g, b, hasColors = false, colors;
+        var defaultR, defaultG, defaultB, alpha;
+
+        // process STL header
+        // check for default color in header ("COLOR=rgba" sequence).
+
+        for (var index = 0; index < 80 - 10; index++) {
+
+            if ((reader.getUint32(index, false) == 0x434F4C4F /*COLO*/) &&
+                (reader.getUint8(index + 4) == 0x52 /*'R'*/) &&
+                (reader.getUint8(index + 5) == 0x3D /*'='*/)) {
+
+                hasColors = true;
+                colors = [];
+
+                defaultR = reader.getUint8(index + 6) / 255;
+                defaultG = reader.getUint8(index + 7) / 255;
+                defaultB = reader.getUint8(index + 8) / 255;
+                alpha = reader.getUint8(index + 9) / 255;
+
+            }
+
+        }
+
         var dataOffset = 84;
         var faceLength = 12 * 4 + 2;
 
-        var offset = 0;
+        var geometry = new THREE.BufferGeometry();
 
-        var positions = new Float32Array(faces * 3 * 3);
-        var normals = new Float32Array(faces * 3 * 3);
-        var indices = new Uint32Array(faces * 3);
-        var indicesCount = 0;
+        var vertices = [];
+        var normals = [];
 
         for (var face = 0; face < faces; face++) {
 
@@ -156,64 +109,144 @@ export default class STLFileLoader implements ISceneLoaderPlugin {
             var normalY = reader.getFloat32(start + 4, true);
             var normalZ = reader.getFloat32(start + 8, true);
 
+            if (hasColors) {
+
+                var packedColor = reader.getUint16(start + 48, true);
+
+                if ((packedColor & 0x8000) === 0) {
+
+                    // facet has its own unique color
+
+                    r = (packedColor & 0x1F) / 31;
+                    g = ((packedColor >> 5) & 0x1F) / 31;
+                    b = ((packedColor >> 10) & 0x1F) / 31;
+
+                } else {
+
+                    r = defaultR;
+                    g = defaultG;
+                    b = defaultB;
+
+                }
+
+            }
+
             for (var i = 1; i <= 3; i++) {
 
                 var vertexstart = start + i * 12;
 
-                // ordering is intentional to match ascii import
-                positions[offset] = reader.getFloat32(vertexstart, true);
-                positions[offset + 2] = reader.getFloat32(vertexstart + 4, true);
-                positions[offset + 1] = reader.getFloat32(vertexstart + 8, true);
+                vertices.push(reader.getFloat32(vertexstart, true));
+                vertices.push(reader.getFloat32(vertexstart + 4, true));
+                vertices.push(reader.getFloat32(vertexstart + 8, true));
 
-                normals[offset] = normalX;
-                normals[offset + 2] = normalY;
-                normals[offset + 1] = normalZ;
+                normals.push(normalX, normalY, normalZ);
 
-                offset += 3;
+                if (hasColors) {
+
+                    colors.push(r, g, b);
+
+                }
+
             }
-            indices[indicesCount] = indicesCount++;
-            indices[indicesCount] = indicesCount++;
-            indices[indicesCount] = indicesCount++;
+
         }
 
-        mesh.setVerticesData(VertexBuffer.PositionKind, positions);
-        mesh.setVerticesData(VertexBuffer.NormalKind, normals);
-        mesh.setIndices(indices);
-        mesh.computeWorldMatrix(true);
+        geometry.addAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3));
+        geometry.addAttribute('normal', new THREE.BufferAttribute(new Float32Array(normals), 3));
+
+        if (hasColors) {
+
+            geometry.addAttribute('color', new THREE.BufferAttribute(new Float32Array(colors), 3));
+            // geometry.hasColors = true;
+            // geometry.alpha = alpha;
+
+        }
+
+        return geometry;
+
     }
 
-    private parseASCII(mesh: Mesh, solidData: string) {
+    parseASCII(data) {
 
-        var positions = [];
+        var geometry, length, patternFace, patternNormal, patternVertex, result, text;
+        geometry = new THREE.BufferGeometry();
+        patternFace = /facet([\s\S]*?)endfacet/g;
+
+        var vertices = [];
         var normals = [];
-        var indices = [];
-        var indicesCount = 0;
 
-        //load facets, ignoring loop as the standard doesn't define it can contain more than vertices
-        var matches;
-        while (matches = this.facetsPattern.exec(solidData)) {
-            var facet = matches[1];
-            //one normal per face
-            var normalMatches = this.normalPattern.exec(facet);
-            this.normalPattern.lastIndex = 0;
-            if (!normalMatches) {
-                continue;
-            }
-            var normal = [Number(normalMatches[1]), Number(normalMatches[5]), Number(normalMatches[3])];
+        var normal = new THREE.Vector3();
 
-            var vertexMatch;
-            while (vertexMatch = this.vertexPattern.exec(facet)) {
-                positions.push(Number(vertexMatch[1]), Number(vertexMatch[5]), Number(vertexMatch[3]));
-                normals.push(normal[0], normal[1], normal[2]);
+        while ((result = patternFace.exec(data)) !== null) {
+
+            text = result[0];
+            patternNormal = /normal[\s]+([\-+]?[0-9]+\.?[0-9]*([eE][\-+]?[0-9]+)?)+[\s]+([\-+]?[0-9]*\.?[0-9]+([eE][\-+]?[0-9]+)?)+[\s]+([\-+]?[0-9]*\.?[0-9]+([eE][\-+]?[0-9]+)?)+/g;
+
+            while ((result = patternNormal.exec(text)) !== null) {
+
+                normal.x = parseFloat(result[1]);
+                normal.y = parseFloat(result[3]);
+                normal.z = parseFloat(result[5]);
+
             }
-            indices.push(indicesCount++, indicesCount++, indicesCount++);
-            this.vertexPattern.lastIndex = 0;
+
+            patternVertex = /vertex[\s]+([\-+]?[0-9]+\.?[0-9]*([eE][\-+]?[0-9]+)?)+[\s]+([\-+]?[0-9]*\.?[0-9]+([eE][\-+]?[0-9]+)?)+[\s]+([\-+]?[0-9]*\.?[0-9]+([eE][\-+]?[0-9]+)?)+/g;
+
+            while ((result = patternVertex.exec(text)) !== null) {
+
+                vertices.push(parseFloat(result[1]), parseFloat(result[3]), parseFloat(result[5]));
+                normals.push(normal.x, normal.y, normal.z);
+
+            }
+
         }
 
-        this.facetsPattern.lastIndex = 0;
-        mesh.setVerticesData(VertexBuffer.PositionKind, positions);
-        mesh.setVerticesData(VertexBuffer.NormalKind, normals);
-        mesh.setIndices(indices);
-        mesh.computeWorldMatrix(true);
+        geometry.addAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3));
+        geometry.addAttribute('normal', new THREE.BufferAttribute(new Float32Array(normals), 3));
+
+        return geometry;
+
+    }
+
+    ensureString(buf) {
+
+        if (typeof buf !== "string") {
+
+            var array_buffer = new Uint8Array(buf);
+            var strArray = [];
+            for (var i = 0; i < buf.byteLength; i++) {
+
+                strArray.push(String.fromCharCode(array_buffer[i])); // implicitly assumes little-endian
+
+            }
+            return strArray.join('');
+
+        } else {
+
+            return buf;
+
+        }
+
+    }
+
+    ensureBinary(buf) {
+
+        if (typeof buf === "string") {
+
+            var array_buffer = new Uint8Array(buf.length);
+            for (var i = 0; i < buf.length; i++) {
+
+                array_buffer[i] = buf.charCodeAt(i) & 0xff; // implicitly assumes little-endian
+
+            }
+            return array_buffer.buffer || array_buffer;
+
+        } else {
+
+            return buf;
+
+        }
+
     }
 }
+
