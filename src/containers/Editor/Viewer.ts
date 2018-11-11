@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 import { ThreeCSG } from './ThreeCSG';
 import * as THREEOrbitControls from 'three-orbit-controls';
-const OrbitControls = new THREEOrbitControls(THREE);
+import * as THREETransformControls from 'three-transform-controls';
 import DragControls from 'three-dragcontrols';
+const OrbitControls = new THREEOrbitControls(THREE);
+const TransformControls = new THREETransformControls(THREE);
 
 export class Viewer {
     scene_: THREE.Scene;
@@ -18,7 +20,8 @@ export class Viewer {
     bgColor_: THREE.Color;
     containerElm_: any;
     camera_: THREE.PerspectiveCamera;
-    controls_: any;
+    controls_: any[];
+    orbit_: any;
     renderer_: any;
     canvas: any;
     pauseRender_: boolean;
@@ -78,13 +81,12 @@ export class Viewer {
     }
     createControls(canvas) {
         // controls. just change this line (and script include) to other threejs controls if desired
-        var controls = new OrbitControls(this.camera_, canvas);
-        this.controls_ = controls;
-        controls["noKeys"] = true;
-        controls.zoomSpeed = 0.5;
-        // controls.autoRotate = true;
-        controls.autoRotateSpeed = 1;
-        controls.addEventListener('change', this.render.bind(this));
+        // var controls = new OrbitControls(this.camera_, canvas);
+        this.controls_=[];
+        this.orbit_ = new OrbitControls(this.camera_, canvas);
+        this.orbit_.update();
+        this.orbit_.addEventListener('change', this.render.bind(this));
+
     }
     webGLAvailable() {
         try {
@@ -133,7 +135,7 @@ export class Viewer {
     }
     render() {
         if (!this.pauseRender_) {
-            requestAnimationFrame(this.render.bind(this));
+            // requestAnimationFrame(this.render.bind(this));
             this.renderer_.render(this.scene_, this.camera_);
         }
     }
@@ -143,7 +145,7 @@ export class Viewer {
         //     requestAnimationFrame(this.animate.bind(this));
         // }, 1000 / 40 ); // last num = fps
         this.requestID_ = requestAnimationFrame(this.animate.bind(this));
-        this.controls_.update();
+        this.orbit_.update();
     }
     cancelAnimate() {
         this.pauseRender_ = true;
@@ -216,14 +218,67 @@ export class Viewer {
             // this.scene_.add.apply(this.scene_, colorMeshes);
             this.scene_.add(res.colorMesh);
             // this.scene_.add(wireMesh);
-            objects.push(res.colorMesh);
+            // objects.push(res.colorMesh);
+            var controls = new TransformControls(this.camera_, this.canvas);
+            controls["noKeys"] = true;
+            controls.addEventListener('change', this.render.bind(this));
+            controls.addEventListener('dragging-changed', (event) => {
+                this.orbit_.enabled = !event.value;
+            });
+            controls.attach(res.colorMesh);
+            this.controls_.push(controls);
+            this.scene_.add(controls);
 
             this.resetZoom(res.boundLen);
         });
-        this.dragControls_ = new DragControls(objects, this.camera_, this.renderer_.domElement);
-        this.dragControls_.addEventListener('dragstart', (event) => { this.controls_.enabled = false;  });
-        this.dragControls_.addEventListener('dragend', (event) => { this.controls_.enabled = true; });
+
+        // this.dragControls_ = new DragControls(objects, this.camera_, this.renderer_.domElement);
+        // this.dragControls_.addEventListener('dragstart', (event) => { this.controls_.enabled = false;  });
+        // this.dragControls_.addEventListener('dragend', (event) => { this.controls_.enabled = true; });
         this.applyDrawOptions();
+        this.addWindowEvents();
+    }
+    addWindowEvents() {
+        // window.addEventListener('keydown', (event) => {
+        //     switch (event.keyCode) {
+        //         case 81: // Q
+        //             this.controls_.setSpace(this.controls_.space === "local" ? "world" : "local");
+        //             break;
+        //         case 17: // Ctrl
+        //             this.controls_.setTranslationSnap(100);
+        //             this.controls_.setRotationSnap(THREE.Math.degToRad(15));
+        //             break;
+        //         case 87: // W
+        //             this.controls_.setMode("translate");
+        //             break;
+        //         case 69: // E
+        //             this.controls_.setMode("rotate");
+        //             break;
+        //         case 82: // R
+        //             this.controls_.setMode("scale");
+        //             break;
+        //         case 187:
+        //         case 107: // +, =, num+
+        //             this.controls_.setSize(this.controls_.size + 0.1);
+        //             break;
+        //         case 189:
+        //         case 109: // -, _, num-
+        //             this.controls_.setSize(Math.max(this.controls_.size - 0.1, 0.1));
+        //             break;
+        //         case 88: // X
+        //             this.controls_.showX = !this.controls_.showX;
+        //             break;
+        //         case 89: // Y
+        //             this.controls_.showY = !this.controls_.showY;
+        //             break;
+        //         case 90: // Z
+        //             this.controls_.showZ = !this.controls_.showZ;
+        //             break;
+        //         case 32: // Spacebar
+        //             this.controls_.enabled = !this.controls_.enabled;
+        //             break;
+        //     }
+        // });
     }
     applyDrawOptions2() {
         this.getUserMeshes('faces').forEach((faceMesh) => {
