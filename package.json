@@ -53,7 +53,8 @@
     "three-dragcontrols": "^0.88.2",
     "three-orbit-controls": "^82.1.0",
     "three-projector-renderer": "^1.0.1",
-    "three-stl-loader": "^1.0.6"
+    "three-stl-loader": "^1.0.6",
+    "three-transform-controls": "^1.0.4"
   },
   "devDependencies": {
     "@types/react": "^16.4.18",
