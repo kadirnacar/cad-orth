@@ -53,12 +53,12 @@ class Channels extends React.Component<any, any>{
     new Promise((resolve, reject) => {
       var sdItems = [];
       items.forEach((item) => {
-        // const polyhedron =oscad.booleanOps.intersection(oscad.primitives3d.cube(200), item.value);
-        sdItems.push(item.value);
+        const polyhedron = oscad.booleanOps.intersection(oscad.primitives3d.cube({ size: 130, center: true }), item.value);
+        sdItems.push(polyhedron);
       });
       this.setState({ items: [] })
       this.csgViewer.setCurrentObjects(sdItems);
-      sdItems=undefined;
+      sdItems = undefined;
       resolve();
     }).then(() => {
       this.toggleBlocking()
@@ -94,38 +94,38 @@ class Channels extends React.Component<any, any>{
   }
 
   render() {
-    
-    return <BlockUi tag="div" blocking={this.state.blocking}>
-        <Row>
-          <Col md="6">
-            <Row>
-              <Col xs="12">
-                <Button color="primary" onClick={this.renderCsg.bind(this)}><i className="fa fa-refresh" /> Render</Button>
-              </Col>
-            </Row>
-            <Row>
-              <Col xs="12">
-                <InputGroup>
-                  <input className="form-control" type="file" ref={(a) => { this.fileInput = a; }} accept=".stl" />
-                  <InputGroupAddon addonType="append"><Button onClick={this.addButtonClick.bind(this)}>Ekle</Button></InputGroupAddon>
-                </InputGroup>
-              </Col>
-            </Row>
-            <Row>
-              <Col xs="12">
 
-              </Col>
-            </Row>
-          </Col>
-          <Col md="6">
-            <div style={{
-              height: 800
-            }} ref={this.viewer}>
-            </div>
-          </Col>
-        </Row>
-      </BlockUi>
-    ;
+    return <BlockUi tag="div" blocking={this.state.blocking}>
+      <Row>
+        <Col md="6">
+          <Row>
+            <Col xs="12">
+              <Button color="primary" onClick={this.renderCsg.bind(this)}><i className="fa fa-refresh" /> Render</Button>
+            </Col>
+          </Row>
+          <Row>
+            <Col xs="12">
+              <InputGroup>
+                <input className="form-control" type="file" ref={(a) => { this.fileInput = a; }} accept=".stl" />
+                <InputGroupAddon addonType="append"><Button onClick={this.addButtonClick.bind(this)}>Ekle</Button></InputGroupAddon>
+              </InputGroup>
+            </Col>
+          </Row>
+          <Row>
+            <Col xs="12">
+
+            </Col>
+          </Row>
+        </Col>
+        <Col md="6">
+          <div style={{
+            height: 800
+          }} ref={this.viewer}>
+          </div>
+        </Col>
+      </Row>
+    </BlockUi>
+      ;
   }
 }
 

@@ -193,10 +193,7 @@ export class Viewer {
                 mesh.userData = { faces: true };
                 return mesh;
             });
-        var wireMesh = res.wireframe;
-        wireMesh.userData = { lines: true };
         this.scene_.add.apply(this.scene_, colorMeshes);
-        this.scene_.add(wireMesh);
         resetZoom && this.resetZoom(res.boundLen);
         this.applyDrawOptions();
     }
@@ -205,19 +202,11 @@ export class Viewer {
         const objects: any[] = [];
 
         items.forEach((item) => {
-            var res = ThreeCSG.fromCSG(item, this.defaultColor_);
-            var colorMeshes = [].concat(res.colorMesh)
-                .map(function (mesh) {
-                    mesh.userData = { faces: true };
-                    return mesh;
-                });
-            var wireMesh = res.wireframe;
-            wireMesh.userData = { lines: true };
-            // this.scene_.add.apply(this.scene_, colorMeshes);
+            console.log(item.color);
+            var res = ThreeCSG.fromCSG(item.value, item.color || this.defaultColor_);
+            res.colorMesh.userData = { faces: true };
             this.scene_.add(res.colorMesh);
-            // this.scene_.add(wireMesh);
             objects.push(res.colorMesh);
-
             this.resetZoom(res.boundLen);
         });
         this.dragControls_ = new DragControls(objects, this.camera_, this.renderer_.domElement);

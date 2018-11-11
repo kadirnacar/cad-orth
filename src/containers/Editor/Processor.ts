@@ -203,11 +203,15 @@ export class Processor {
 
         this.setSelectedObjectIndex((obj.length > 0) ? 0 : -1);
     }
-
+    randomNum() {
+        return Math.floor(Math.random() * 256);
+        
+        // return (Math.random().toFixed(1));
+    }
     renderItems(items: any[]) {
         this.clearOutputFile();
-        var solids = items.map((item) => {
-            return Processor.convertToSolid(item);
+        var solids = items.map((item, index) => {
+            return { value: Processor.convertToSolid(item), color: [this.randomNum(), this.randomNum(), this.randomNum()] };
         });
         this.viewer.setItems(solids);
     }
