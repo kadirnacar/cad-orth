@@ -220,7 +220,7 @@ export class Viewer {
             // this.scene_.add(wireMesh);
             // objects.push(res.colorMesh);
             var controls = new TransformControls(this.camera_, this.canvas);
-            controls["noKeys"] = true;
+            // controls["noKeys"] = true;
             controls.addEventListener('change', this.render.bind(this));
             controls.addEventListener('dragging-changed', (event) => {
                 this.orbit_.enabled = !event.value;
