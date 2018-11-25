@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CSG } from '@jscad/csg';
+import { string } from 'prop-types';
 // import { CSG, CAG } from '../../utils/CSG.js';
 
 /*
@@ -28,6 +29,7 @@ export class ThreeCSG {
         // list of different opacities used by polygons
         var opacities = [];
         var materialIdx, opacity, colorKey, polyColor, color;
+        color = new THREE.Color("rgb("+  defaultColor.join(",")+")");
 
         polygons.forEach((polygon) => {
             // polygon shared null? -> defaultColor, else extract color
@@ -39,9 +41,7 @@ export class ThreeCSG {
                 vertices.pop();
             }
 
-            polyColor = polygon.shared.color ?
-                polygon.shared.color.slice() :
-                defaultColor.slice();
+            polyColor = defaultColor.slice();
             opacity = polyColor.pop();
 
             // one material per opacity (color not relevant)
@@ -56,18 +56,15 @@ export class ThreeCSG {
             }
 
             // for each different color, create a color object
-            var colorKey = polyColor.join("_");
-            if (!(colorKey in colors)) {
-                color = new THREE.Color();
-                color.setRGB.apply(color, polyColor);
-                colors[colorKey] = color;
-            }
+
+            // color.setRGB(defaultColor);
+
 
             // create a mesh face using color (not opacity~material)
             for (var k = 2; k < vertices.length; k++) {
                 face = new THREE.Face3(vertices[0], vertices[k - 1], vertices[k],
                     new THREE.Vector3().copy(polygon.plane.normal),
-                    colors[colorKey], materialIdx);
+                    color, materialIdx);
                 face.materialIdx = materialIdx;
                 three_geometry.faces.push(face);
             }
@@ -75,45 +72,24 @@ export class ThreeCSG {
 
         // for each opacity in array, create a matching material
         // (color are on faces, not materials)
-        var materials = opacities.map(function (opa) {
-            // trigger wireframe if opa == 0
-            var asWireframe = (opa == 0);
-            // if opacity == 0, this is just a wireframe
-            var phongMaterial = new THREE.MeshPhongMaterial({
-                opacity: opa || 1,
-                wireframe: asWireframe,
-                transparent: opa != 1 && opa != 0,
-                vertexColors: THREE.FaceColors
-            });
-            // (force black wireframe)
-            // if (asWireframe) {
-            //     phongMaterial.color = 'black';
-            // }
-            if (opa > 0 && opa < 1) {
-                phongMaterial.depthWrite = false;
-            }
-            return phongMaterial;
-        });
+       
         // now, materials is array of materials matching opacities - color not defined yet
-
-        var colorMesh = new THREE.Mesh(three_geometry, new THREE.MeshFaceMaterial(materials));
+        var phongMaterial = new THREE.MeshPhongMaterial({
+            // vertexColors: THREE.FaceColors,
+            wireframe: false,
+            color: color
+        });
+        var colorMesh = new THREE.Mesh(three_geometry, phongMaterial);
 
         // pass back bounding sphere radius (or 0 if empty object)
         three_geometry.computeBoundingSphere();
         var boundLen = three_geometry.boundingSphere.radius +
             three_geometry.boundingSphere.center.length() || 0;
 
-        var phongWireframeMaterial = new THREE.MeshPhongMaterial({
-            wireframe: true,
-            transparent: false,
-            color: 'black'
-        });
-        var wireframe = new THREE.Mesh(three_geometry, phongWireframeMaterial);
 
         // return result;
         return {
             colorMesh: colorMesh,
-            wireframe: wireframe,
             boundLen: boundLen
         };
     }
